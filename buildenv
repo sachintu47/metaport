@@ -89,6 +89,24 @@ zopen_init()
     echo "Error - unable to find local zopen at ${PWD}/bin/zopen" >&2
     return 8
   fi
+
+  # Download curl package if not present
+  CURL_PACKAGE="curl-8.10.1.20241001_214340.zos.pax.Z"
+  CURL_URL="https://github.com/zopencommunity/curlport/releases/download/STABLE_curlport_2544/${CURL_PACKAGE}"
+  mkdir -p "$PWD/packages"
+  
+  # Check if any curl package already exists
+  existing_curl=$(ls "$PWD/packages"/curl-*.zos.pax.Z 2>/dev/null | head -1)
+  
+  if [ -n "$existing_curl" ]; then
+    echo "Found existing curl package: $(basename "$existing_curl"), skipping download"
+  else
+    echo "Downloading curl package from ${CURL_URL}..."
+    curl -L -o "$PWD/packages/${CURL_PACKAGE}" "${CURL_URL}" || {
+      echo "Error: Failed to download curl package"
+      return 1
+    }
+  fi
 }
 
 zopen_check()
@@ -159,11 +177,19 @@ zopen_install()
   fi
 
   # Copy essential runtime folders
-  for folder in bin include man data packages utilities patch-utils; do
+  for folder in bin include man data utilities patch-utils; do
     if [ -d "$PWD/$folder" ]; then
       cp -rv "$PWD/$folder" "$ZOPEN_INSTALL_DIR/"
     fi
   done
+
+  # Copy only curl packages
+  if [ -d "$PWD/packages" ]; then
+    mkdir -p "$ZOPEN_INSTALL_DIR/packages"
+    for curl_pkg in "$PWD/packages"/curl-*.zos.pax.Z; do
+      [ -f "$curl_pkg" ] && cp -v "$curl_pkg" "$ZOPEN_INSTALL_DIR/packages/"
+    done
+  fi
 
   # Copy essential runtime files
   for file in .env cacert.pem LICENSE; do
