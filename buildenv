@@ -150,17 +150,35 @@ zopen_install()
     echo "Wrong version of Perl: $perlver.$perlrel (expected 5.38 or higher)"
     return 8
   fi
+  
   mkdir -p "$ZOPEN_INSTALL_DIR"
+
   if [ -z "$ZOPEN_META_DEV_ROOT" ]; then
     rm -rvf "$PWD/zotsampleport"
     rm -rvf "$PWD/.git"* "$PWD/.editorconfig"
   fi
-  cp -rv $PWD/* $ZOPEN_INSTALL_DIR/
+
+  # Copy essential runtime folders
+  for folder in bin include man data packages utilities patch-utils; do
+    if [ -d "$PWD/$folder" ]; then
+      cp -rv "$PWD/$folder" "$ZOPEN_INSTALL_DIR/"
+    fi
+  done
+
+  # Copy essential runtime files
+  for file in .env cacert.pem LICENSE; do
+    if [ -f "$PWD/$file" ]; then
+      cp -v "$PWD/$file" "$ZOPEN_INSTALL_DIR/"
+    fi
+  done
+
   mkdir -p "$ZOPEN_INSTALL_DIR/man/man1"
   zopen-help2man "$ZOPEN_INSTALL_DIR/man/man1"
+
   mkdir -p "$ZOPEN_INSTALL_DIR/ref"
   echo "HTML reference pages will be written to $ZOPEN_INSTALL_DIR/ref"
-  for man in $ZOPEN_INSTALL_DIR/man/man1/*.1; do
+  for man in "$ZOPEN_INSTALL_DIR"/man/man1/*.1; do
+    [ ! -f "$man" ] && continue
     base=${man##*/}
     name=${base%%.1}
     html="$ZOPEN_INSTALL_DIR/ref/${name}.html"
